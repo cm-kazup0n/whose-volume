@@ -1,9 +1,9 @@
-package logic
+package whose_volume.logic
 
 import cats.Monad
 import cats.implicits._
-import infra.aws.{TrustedAdvisorClient, TrustedAdvisorLanguage}
-import vo.NoSnapshotVolume
+import whose_volume.infra.aws.{TrustedAdvisorClient, TrustedAdvisorLanguage}
+import whose_volume.vo.NoSnapshotVolume
 
 import scala.collection.JavaConverters._
 import scala.language.higherKinds

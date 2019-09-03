@@ -1,4 +1,4 @@
-package infra.aws
+package whose_volume.infra.aws
 
 import cats.data.ReaderT
 import cats.effect.IO

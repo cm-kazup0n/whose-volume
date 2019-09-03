@@ -1,7 +1,11 @@
-package logic
+package whose_volume.logic
 
 import cats.Applicative
-import vo.{NoSnapshotVolume, NoSnapshotVolumeWithAttachment, VolumeAttachment}
+import whose_volume.vo.{
+  NoSnapshotVolume,
+  NoSnapshotVolumeWithAttachment,
+  VolumeAttachment
+}
 
 import scala.language.higherKinds
 

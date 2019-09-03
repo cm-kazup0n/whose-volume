@@ -1,9 +1,13 @@
-package logic
+package whose_volume.logic
 
 import cats.implicits._
 import cats.{Monad, Show}
-import infra.Console
-import vo.{NoSnapshotVolume, NoSnapshotVolumeWithAttachment, VolumeAttachment}
+import whose_volume.infra.Console
+import whose_volume.vo.{
+  NoSnapshotVolume,
+  NoSnapshotVolumeWithAttachment,
+  VolumeAttachment
+}
 
 import scala.language.higherKinds
 

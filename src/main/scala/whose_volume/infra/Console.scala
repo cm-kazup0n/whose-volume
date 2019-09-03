@@ -1,4 +1,4 @@
-package infra
+package whose_volume.infra
 
 import cats.Show
 import cats.effect.IO

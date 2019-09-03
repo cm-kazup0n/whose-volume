@@ -1,9 +1,9 @@
-package logic
+package whose_volume.logic
 
 import cats.Monad
 import cats.implicits._
-import infra.aws.EC2Client
-import vo.VolumeAttachment
+import whose_volume.infra.aws.EC2Client
+import whose_volume.vo.VolumeAttachment
 
 import scala.collection.JavaConverters._
 import scala.language.higherKinds

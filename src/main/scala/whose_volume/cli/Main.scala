@@ -1,16 +1,16 @@
-package cli
+package whose_volume.cli
 
 import cats.data.ReaderT
 import cats.effect._
 import cats._
 import com.amazonaws.regions.Regions
-import infra.aws.{AWSConfig, CTX}
-import logic._
-import infra.Console.autoDerive._
+import whose_volume.infra.aws.{AWSConfig, CTX}
+import whose_volume.logic._
+import whose_volume.infra.Console.autoDerive._
 import wvlet.airframe.log
-import wvlet.log.{LogFormatter, Logger}
+import wvlet.log.{LogFormatter, LogSupport, Logger}
 
-object Main extends IOApp {
+object Main extends IOApp with LogSupport {
 
   private implicit val fk: IO ~> CTX = λ[IO ~> CTX](io => ReaderT(_ => io))
   private val config: AWSConfig = AWSConfig(Regions.AP_NORTHEAST_1.getName)
@@ -23,7 +23,9 @@ object Main extends IOApp {
 
   def program: CTX[ExitCode] =
     for {
+      _ <- fk(IO(info("start getting trusted advisors result")))
       a <- new FindNoSnapshotVolumes[CTX].run
+      _ <- fk(IO(info("start getting volume details")))
       b <- new FindVolumeDetails[CTX].run(a.flatMap(_.volumeId.toSeq))
       c <- new MergeNoSnapshotAndAttaches[CTX].run(a, b)
       _ <- new PrintResult[CTX].run(c)

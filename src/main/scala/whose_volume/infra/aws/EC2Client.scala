@@ -1,4 +1,4 @@
-package infra.aws
+package whose_volume.infra.aws
 
 import cats.data.{OptionT, ReaderT}
 import cats.effect.{ContextShift, IO}
@@ -42,11 +42,14 @@ object EC2Client {
         cs: ContextShift[IO]
     ): M[DescribeVolumesResult] =
       OptionT {
-        IO.shift *> IO(
-          client
+        IO.shift *> IO {
+          debug(s"start getting volume detail for ${id}")
+          val r = client
             .describeVolumes(new DescribeVolumesRequest().withVolumeIds(id))
             .some
-        ).recoverWith {
+          debug(s"getting volume detail for ${id} completed")
+          r
+        }.recoverWith {
           case e: AmazonEC2Exception
               if e.getErrorCode === "InvalidVolume.NotFound" =>
             warn(s"volume not found ${id}")

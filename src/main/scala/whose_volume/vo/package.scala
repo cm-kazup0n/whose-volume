@@ -1,3 +1,4 @@
+package whose_volume
 package object vo {
 
   final case class NoSnapshotVolume(
