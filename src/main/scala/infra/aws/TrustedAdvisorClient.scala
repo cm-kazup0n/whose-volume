@@ -15,7 +15,9 @@ import scala.language.higherKinds
 
 @finalAlg
 trait TrustedAdvisorClient[F[_]] {
-  def describeTrustedAdvisorChecks: F[DescribeTrustedAdvisorChecksResult]
+  def describeTrustedAdvisorChecks(
+      lang: TrustedAdvisorLanguage
+  ): F[DescribeTrustedAdvisorChecksResult]
 
   def describeTrustedAdvisorCheck(
       checkId: String
@@ -27,13 +29,14 @@ object TrustedAdvisorClient {
   implicit val onAWSClient: TrustedAdvisorClient[CTX] =
     new TrustedAdvisorClient[CTX] {
 
-      private val request =
-        new DescribeTrustedAdvisorChecksRequest().withLanguage("ja")
       private val region = "us-east-1"
 
-      override def describeTrustedAdvisorChecks
-        : CTX[DescribeTrustedAdvisorChecksResult] = ReaderT { aws: AWSConfig =>
+      override def describeTrustedAdvisorChecks(
+          lang: TrustedAdvisorLanguage
+      ): CTX[DescribeTrustedAdvisorChecksResult] = ReaderT { aws: AWSConfig =>
         IO {
+          val request =
+            new DescribeTrustedAdvisorChecksRequest().withLanguage(lang.iso639)
           client(aws).describeTrustedAdvisorChecks(request)
         }
       }

@@ -2,7 +2,7 @@ package logic
 
 import cats.Monad
 import cats.implicits._
-import infra.aws.TrustedAdvisorClient
+import infra.aws.{TrustedAdvisorClient, TrustedAdvisorLanguage}
 import vo.NoSnapshotVolume
 
 import scala.collection.JavaConverters._
@@ -14,12 +14,14 @@ class FindNoSnapshotVolumes[F[_]: Monad](
 
   def run: F[Seq[NoSnapshotVolume]] =
     for {
-      checks <- trustedAdvisorClient.describeTrustedAdvisorChecks.map(
-        _.getChecks.asScala
-      )
+      checks <- trustedAdvisorClient
+        .describeTrustedAdvisorChecks(TrustedAdvisorLanguage.EN)
+        .map(
+          _.getChecks.asScala
+        )
       volumes <- checks.find(
         chk =>
-          chk.getCategory === "fault_tolerance" && chk.getName === "Amazon EBS スナップショット"
+          chk.getCategory === "fault_tolerance" && chk.getName === "Amazon EBS Snapshots"
       ) match {
         case Some(chk) => checkToVolumes(chk.getId())
         case None      => Monad[F].pure(Seq.empty[NoSnapshotVolume])
