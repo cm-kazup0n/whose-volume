@@ -4,5 +4,6 @@ import cats.data.ReaderT
 import cats.effect.IO
 
 package object aws {
+  final case class AWSConfig(region: String)
   type CTX[A] = ReaderT[IO, AWSConfig, A]
 }

@@ -1,35 +1,58 @@
 package infra.aws
 
-import cats.data.ReaderT
-import cats.effect.IO
-import com.amazonaws.services.ec2.AmazonEC2Client
+import cats.data.{OptionT, ReaderT}
+import cats.effect.{ContextShift, IO}
+import cats.implicits._
+import cats.tagless.finalAlg
 import com.amazonaws.services.ec2.model.{
+  AmazonEC2Exception,
   DescribeVolumesRequest,
   DescribeVolumesResult
 }
+import com.amazonaws.services.ec2.{AmazonEC2, AmazonEC2Client}
+import wvlet.log.LogSupport
 
+import scala.concurrent.ExecutionContext
 import scala.language.higherKinds
 
+@finalAlg
 trait EC2Client[F[_]] {
-
-  def describeVolumes(volumeIds: Seq[String]): F[DescribeVolumesResult]
-
+  def describeVolumes(volumeIds: Seq[String]): F[Seq[DescribeVolumesResult]]
 }
 
 object EC2Client {
-  def apply[F[_]](implicit F: EC2Client[F]): EC2Client[F] = F
+  implicit object onAWSClient extends EC2Client[CTX] with LogSupport {
 
-  implicit def onAWSClient: EC2Client[CTX] =
-    (volumeIds: Seq[String]) =>
-      ReaderT { aws =>
-        IO {
-          AmazonEC2Client
-            .builder()
-            .withRegion(aws.region)
-            .build()
-            .describeVolumes(
-              new DescribeVolumesRequest().withVolumeIds(volumeIds: _*)
-            )
+    type M[A] = OptionT[IO, A]
+
+    override def describeVolumes(
+        volumeIds: Seq[String]
+    ): CTX[Seq[DescribeVolumesResult]] = ReaderT { config =>
+      implicit val client: AmazonEC2 =
+        AmazonEC2Client.builder().withRegion(config.region).build()
+      implicit val cs: ContextShift[IO] =
+        IO.contextShift(ExecutionContext.Implicits.global)
+      volumeIds.toList.traverseFilter(describeVolume(_).value)
+    }
+
+    def describeVolume(
+        id: String
+    )(
+        implicit client: AmazonEC2,
+        cs: ContextShift[IO]
+    ): M[DescribeVolumesResult] =
+      OptionT {
+        IO.shift *> IO(
+          client
+            .describeVolumes(new DescribeVolumesRequest().withVolumeIds(id))
+            .some
+        ).recoverWith {
+          case e: AmazonEC2Exception
+              if e.getErrorCode === "InvalidVolume.NotFound" =>
+            warn(s"volume not found ${id}")
+            IO.pure(none)
         }
       }
+  }
+
 }

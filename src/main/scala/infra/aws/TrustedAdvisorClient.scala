@@ -2,6 +2,7 @@ package infra.aws
 
 import cats.data.ReaderT
 import cats.effect.IO
+import cats.tagless.finalAlg
 import com.amazonaws.services.support.model.{
   DescribeTrustedAdvisorCheckResultRequest,
   DescribeTrustedAdvisorCheckResultResult,
@@ -12,6 +13,7 @@ import com.amazonaws.services.support.{AWSSupport, AWSSupportClient}
 
 import scala.language.higherKinds
 
+@finalAlg
 trait TrustedAdvisorClient[F[_]] {
   def describeTrustedAdvisorChecks: F[DescribeTrustedAdvisorChecksResult]
 
@@ -22,11 +24,7 @@ trait TrustedAdvisorClient[F[_]] {
 
 object TrustedAdvisorClient {
 
-  def apply[F[_]](
-      implicit F: TrustedAdvisorClient[F]
-  ): TrustedAdvisorClient[F] = F
-
-  implicit def onAWSClient: TrustedAdvisorClient[CTX] =
+  implicit val onAWSClient: TrustedAdvisorClient[CTX] =
     new TrustedAdvisorClient[CTX] {
 
       private val request =
@@ -34,11 +32,10 @@ object TrustedAdvisorClient {
       private val region = "us-east-1"
 
       override def describeTrustedAdvisorChecks
-          : CTX[DescribeTrustedAdvisorChecksResult] = ReaderT {
-        aws: AWSConfig =>
-          IO {
-            client(aws).describeTrustedAdvisorChecks(request)
-          }
+        : CTX[DescribeTrustedAdvisorChecksResult] = ReaderT { aws: AWSConfig =>
+        IO {
+          client(aws).describeTrustedAdvisorChecks(request)
+        }
       }
 
       override def describeTrustedAdvisorCheck(

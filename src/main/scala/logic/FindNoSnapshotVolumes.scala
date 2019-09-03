@@ -9,7 +9,7 @@ import scala.collection.JavaConverters._
 import scala.language.higherKinds
 
 class FindNoSnapshotVolumes[F[_]: Monad](
-    trustedAdvisorClient: TrustedAdvisorClient[F]
+    implicit trustedAdvisorClient: TrustedAdvisorClient[F]
 ) {
 
   def run: F[Seq[NoSnapshotVolume]] =
@@ -32,7 +32,7 @@ class FindNoSnapshotVolumes[F[_]: Monad](
         checkResult.getResult.getFlaggedResources.asScala.map {
           flaggedResource =>
             flaggedResource.getMetadata.asScala match {
-              case Seq(region, volId) =>
+              case Seq(region, volId, _*) =>
                 NoSnapshotVolume(
                   region.some,
                   volId.some,

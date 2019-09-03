@@ -1,39 +1,32 @@
 package cli
 
 import cats.data.ReaderT
-import cats.effect.{ExitCode, IO, IOApp}
-import cats.~>
+import cats.effect._
+import cats._
 import com.amazonaws.regions.Regions
-import infra.aws.{AWSConfig, CTX, EC2Client, TrustedAdvisorClient}
-import logic.{FindNoSnapshotVolumes, FindVolumeDetails}
-import vo.Result
+import infra.aws.{AWSConfig, CTX}
+import logic._
+import infra.Console.autoDerive._
+import wvlet.airframe.log
+import wvlet.log.{LogFormatter, Logger}
 
 object Main extends IOApp {
 
-  private val findUnattachedVolumes: FindNoSnapshotVolumes[CTX] =
-    new FindNoSnapshotVolumes[CTX](TrustedAdvisorClient[CTX])
-  private val findVolumeDetails: FindVolumeDetails[CTX] =
-    new FindVolumeDetails[CTX](EC2Client[CTX])
+  private implicit val fk: IO ~> CTX = λ[IO ~> CTX](io => ReaderT(_ => io))
+  private val config: AWSConfig = AWSConfig(Regions.AP_NORTHEAST_1.getName)
 
-  val ioToCTX: IO ~> CTX = λ[IO ~> CTX](fa => ReaderT(_ => fa))
+  log.init
+  Logger.setDefaultFormatter(LogFormatter.AppLogFormatter)
+  Logger.scheduleLogLevelScan
 
-  override def run(args: List[String]): IO[ExitCode] =
-    (for {
-      snapshotLess <- findUnattachedVolumes.run
-      volumeDetailsMap <- findVolumeDetails
-        .run(snapshotLess.flatMap(_.volumeId.toSeq))
-        .map(_.map(v => v.volumeId -> v).toMap)
-      result = snapshotLess.map(
-        c => Result(c, c.volumeId.flatMap(volumeDetailsMap.get))
-      )
-      exitCode <- ioToCTX apply IO {
-        println(result)
-        ExitCode.Success
-      }
-    } yield
-      exitCode).run(AWSConfig(Regions.AP_NORTHEAST_1.getName)).handleErrorWith {
-      case e: Throwable =>
-        Console.err.println(e)
-        IO.pure(ExitCode.Error)
-    }
+  override def run(args: List[String]): IO[ExitCode] = program.run(config)
+
+  def program: CTX[ExitCode] =
+    for {
+      a <- new FindNoSnapshotVolumes[CTX].run
+      b <- new FindVolumeDetails[CTX].run(a.flatMap(_.volumeId.toSeq))
+      c <- new MergeNoSnapshotAndAttaches[CTX].run(a, b)
+      _ <- new PrintResult[CTX].run(c)
+    } yield ExitCode.Success
+
 }
